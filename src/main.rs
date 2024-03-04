@@ -27,42 +27,6 @@ fn readyz_route() -> Status {
     Status::Ok
 }
 
-//fn multidoc_deserialize(data: &str) -> Result<Vec<serde_yaml::Value>> {
-//    let mut docs = vec![];
-//
-//    for de in serde_yaml::Deserializer::from_str(data) {
-//        docs.push(serde_yaml::Value::deserialize(de)?);
-//    }
-//    Ok(docs)
-//}
-
-//fn load_database_template_old(path: &std::path::Path) -> Result<(), ()> {
-//    let yaml = std::fs::read_to_string(path)
-//        .with_context(|| format!("Failed to read {}", path.display()))?;
-//
-//    for doc in multidoc_deserialize(&yaml)? {
-//        let obj: DynamicObject = serde_yaml::from_value(doc)?;
-//        let namespace = obj.metadata.namespace.as_deref().or(Some("default"));
-//        let gvk = if let Some(tm) = &obj.types {
-//            GroupVersionKind::try_from(tm)
-//        } else {
-//            panic!("No type metadata in {:?}", obj);
-//        };
-//        let name = obj.name_any();
-//
-//        if let Some((ar, caps)) = discovery.resolve_gvk(&gvk) {
-//            let api = dynamic_api(ar, caps, client.clone(), namespace, false);
-//            // trace!("Applying {}: \n{}", gvk.kind, serde_yaml::to_string(&obj)?);
-//            let data: serde_json::Value = serde_json::to_value(&obj)?;
-//            let _r = api.patch(&name, &ssapply, &Patch::Apply(data)).await?;
-//            // info!("applied {} {}", gvk.kind, name);
-//        } else {
-//            // warn!("Cannot apply document for unknown {:?}", gvk);
-//        }
-//    }
-//    Ok(())
-//}
-
 fn setup_logger() -> Result<(), log::SetLoggerError> {
     fern::Dispatch::new()
         // Perform allocation-free log formatting
