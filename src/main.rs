@@ -1,6 +1,8 @@
+use std::env;
+
 use crate::routes::{create_database::*, list_database::*};
 use anyhow::Result;
-use log::error;
+use log::{error, info};
 use rocket::get;
 use rocket::http::Status;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
@@ -48,7 +50,11 @@ async fn main() -> Result<(), ()> {
             error!("Failed to create kubernetes client: {}", err);
             std::process::exit(1);
         }),
+        ingress_domain: env::var("INGRESS_DOMAIN").unwrap_or("example.com".to_owned()),
     };
+
+    info!("Starting moonscale server with context:");
+    info!("\tIngress domain: {}", context.ingress_domain);
 
     let launch_result = rocket::build()
         .mount(

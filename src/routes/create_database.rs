@@ -1,8 +1,5 @@
 use anyhow::{Context, Result};
-use kube::{
-    api::{DynamicObject, PatchParams},
-    Client, Discovery,
-};
+use kube::{api::PatchParams, Discovery};
 use log::error;
 use rocket::{http::Status, post, serde::json::Json, State};
 use rocket_okapi::openapi;
@@ -36,17 +33,19 @@ fn multidoc_deserialize(
 async fn create_database(
     template_data: &str,
     variable_data: &CreateDatabaseRequestModel,
-    kubeclient: &Client,
+    context: &crate::context::Context,
     discovery: &Discovery,
 ) -> Result<(), anyhow::Error> {
     let ssapply = PatchParams::apply("kubectl-light").force();
-    let mut context: tera::Context = tera::Context::new();
+    let mut template_context: tera::Context = tera::Context::new();
 
-    context.insert("name", variable_data.name.as_str());
+    template_context.insert("name", variable_data.name.as_str());
+    template_context.insert("domain", context.ingress_domain.as_str());
     // TODO: Check size formatting
-    context.insert("pvc_size", format!("{}Gi", variable_data.size).as_str());
-    for doc in multidoc_deserialize(&template_data, &mut context)? {
-        let _ = kubernetes_apply_document(kubeclient, discovery, &ssapply, doc).await;
+    template_context.insert("pvc_size", format!("{}Gi", variable_data.size).as_str());
+    for doc in multidoc_deserialize(&template_data, &mut template_context)? {
+        let _ =
+            kubernetes_apply_document(&context.kubernetes_client, discovery, &ssapply, doc).await;
         // let obj: DynamicObject = serde_yaml::from_value(doc)?;
     }
     Ok(())
@@ -73,7 +72,7 @@ pub async fn route_create_database(
     let database_creation_result = create_database(
         &context.database_template_yaml_raw,
         &request.0,
-        &context.kubernetes_client,
+        &context,
         &discovery.unwrap(),
     )
     .await;

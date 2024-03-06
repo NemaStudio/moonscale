@@ -3,7 +3,7 @@ use k8s_openapi::serde_json;
 use kube::{
     api::{ApiResource, DynamicObject, GroupVersionKind, Patch},
     discovery::{ApiCapabilities, Scope},
-    Api, Client, Discovery, Resource, ResourceExt,
+    Api, Client, Discovery, ResourceExt,
 };
 use log::error;
 use log::info;

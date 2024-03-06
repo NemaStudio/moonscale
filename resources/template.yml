@@ -95,6 +95,42 @@ spec:
     app.kubernetes.io/instance: moonscale-instance-{{ name }}
     app.kubernetes.io/name: moonscale-instance-{{ name }}
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: moonscale-instance-{{ name }}-ps
+  labels:
+    app.kubernetes.io/managed-by: Moonscale
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - name: planetscale-api
+      port: 3900
+      protocol: TCP
+      targetPort: planetscale-api
+      nodePort: null
+  selector:
+    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/name: moonscale-instance-{{ name }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: moonscale-instance-{{ name }}
+spec:
+  rules:
+    - host: moonscale-instance-{{ name }}.{{ domain }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: moonscale-instance-{{ name }}-ps
+                port:
+                  name: planetscale-api
+            path: /
+            pathType: Prefix
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -142,6 +178,24 @@ spec:
         sysctls: []
       initContainers:
       containers:
+        - image: ghcr.io/mattrobenolt/ps-http-sim:latest
+          imagePullPolicy: IfNotPresent
+          name: planetscale-proxy
+          args:
+            [
+              "-listen-port=3900",
+              "-mysql-dbname=planetscale",
+              "-mysql-addr=localhost",
+            ]
+          ports:
+            - containerPort: 3900
+              name: planetscale-api
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+
         - name: mysql
           image: docker.io/bitnami/mysql:8.0.36-debian-12-r8
           imagePullPolicy: "IfNotPresent"
@@ -168,7 +222,7 @@ spec:
             - name: MYSQL_PORT
               value: "3306"
             - name: MYSQL_DATABASE
-              value: "my_database"
+              value: "planetscale"
           envFrom:
           ports:
             - name: mysql
@@ -257,4 +311,4 @@ spec:
         storageClassName: "cinder-generic-hdd"
         resources:
           requests:
-            storage: "8Gi"
+            storage: "{{ pvc_size }}"
