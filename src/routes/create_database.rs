@@ -1,102 +1,53 @@
 use anyhow::{Context, Result};
-use k8s_openapi::{api::discovery, serde_json};
 use kube::{
-    api::{ApiResource, DynamicObject, GroupVersionKind, Patch, PatchParams},
-    core::gvk,
-    discovery::{ApiCapabilities, Scope},
-    Api, Client, Discovery, ResourceExt,
+    api::{DynamicObject, PatchParams},
+    Client, Discovery,
 };
 use log::error;
-use rocket::{
-    http::{ContentType, Status},
-    post, State,
-};
+use rocket::{http::Status, post, serde::json::Json, State};
 use rocket_okapi::openapi;
 use serde::Deserialize;
 use tera::Tera;
 
-fn dynamic_api(
-    ar: ApiResource,
-    caps: ApiCapabilities,
-    client: Client,
-    ns: Option<&str>,
-    all: bool,
-) -> Api<DynamicObject> {
-    if caps.scope == Scope::Cluster || all {
-        Api::all_with(client, &ar)
-    } else if let Some(namespace) = ns {
-        Api::namespaced_with(client, namespace, &ar)
-    } else {
-        Api::default_namespaced_with(client, &ar)
-    }
-}
+use crate::{kubernetes::kubernetes_apply_document, models::database::CreateDatabaseRequestModel};
 
-fn multidoc_deserialize(data: &str) -> Result<Vec<serde_yaml::Value>, ()> {
+fn multidoc_deserialize(
+    data: &str,
+    context: &mut tera::Context,
+) -> Result<Vec<serde_yaml::Value>, anyhow::Error> {
     let mut docs = vec![];
-    let mut context = tera::Context::new();
     let mut tera = Tera::default();
 
-    tera.add_raw_template("template", data);
-    context.insert("name", "pr-108");
-    let render_result = tera.render("template", &context);
+    tera.add_raw_template("template", data)
+        .context("Rendering error")?;
+    let render_result = tera
+        .render("template", context)
+        .context("Failed to render template, check your yaml file.")?;
 
-    if render_result.is_err() {
-        error!("Failed to render template: {:?}", render_result);
-        return Err(());
-    }
-    for de in serde_yaml::Deserializer::from_str(render_result.unwrap().as_str()) {
-        let dedoc = serde_yaml::Value::deserialize(de);
+    for de in serde_yaml::Deserializer::from_str(render_result.as_str()) {
+        let dedoc = serde_yaml::Value::deserialize(de)
+            .context("Couldn't deserialize yaml. Check format.")?;
 
-        if dedoc.is_err() {
-            error!("Failed to deserialize yaml: {:?}", dedoc);
-            return Err(());
-        }
-        docs.push(dedoc.unwrap());
+        docs.push(dedoc);
     }
     Ok(docs)
 }
 
-async fn create_database(data: &str, kubeclient: &Client, discovery: &Discovery) -> Result<(), ()> {
-    let formatted_template = multidoc_deserialize(data);
+async fn create_database(
+    template_data: &str,
+    variable_data: &CreateDatabaseRequestModel,
+    kubeclient: &Client,
+    discovery: &Discovery,
+) -> Result<(), anyhow::Error> {
     let ssapply = PatchParams::apply("kubectl-light").force();
+    let mut context: tera::Context = tera::Context::new();
 
-    if formatted_template.is_err() {
-        error!("Failed to deserialize yaml: {:?}", formatted_template);
-        return Err(());
-    }
-    for doc in multidoc_deserialize(&data)? {
-        // TODO: Refactor
-        let obj: DynamicObject = serde_yaml::from_value(doc).unwrap_or_else(|err| {
-            error!(
-                "Failed to interpret yaml as a valid Kubernetes object: {}",
-                err
-            );
-            std::process::exit(1);
-        });
-        let namespace = obj.metadata.namespace.as_deref().or(Some("moonscale"));
-        let gvk = if let Some(tm) = &obj.types {
-            GroupVersionKind::try_from(tm)
-        } else {
-            panic!("No type metadata in {:?}", obj);
-        };
-        let name = obj.name_any();
-
-        if let Some((ar, caps)) = discovery.resolve_gvk(&gvk.unwrap()) {
-            let api = dynamic_api(ar, caps, kubeclient.clone(), namespace, false);
-            let data: serde_json::Value = serde_json::to_value(&obj).unwrap();
-            let _r = api.patch(&name, &ssapply, &Patch::Apply(data)).await;
-
-            if _r.is_err() {
-                error!("Failed to apply document for {:?}: {:?}", name, _r);
-            } else {
-                println!("Applied {:?}", &obj.types.unwrap());
-            }
-        } else {
-            error!(
-                "Cannot apply document for unknown {:?}",
-                &obj.types.unwrap()
-            );
-        }
+    context.insert("name", variable_data.name.as_str());
+    // TODO: Check size formatting
+    context.insert("pvc_size", format!("{}Gi", variable_data.size).as_str());
+    for doc in multidoc_deserialize(&template_data, &mut context)? {
+        let _ = kubernetes_apply_document(kubeclient, discovery, &ssapply, doc).await;
+        // let obj: DynamicObject = serde_yaml::from_value(doc)?;
     }
     Ok(())
 }
@@ -104,9 +55,12 @@ async fn create_database(data: &str, kubeclient: &Client, discovery: &Discovery)
 /// # Create a PlanetScale's compatible database
 ///
 /// This route is used to create a PlanetScale's compatible database.
-#[openapi(tag = "database")]
-#[post("/database")]
-pub async fn route_create_database(context: &State<crate::context::Context>) -> Status {
+#[openapi(tag = "Database")]
+#[post("/database", data = "<request>")]
+pub async fn route_create_database(
+    context: &State<crate::context::Context>,
+    request: Json<CreateDatabaseRequestModel>,
+) -> Status {
     let discovery = Discovery::new(context.kubernetes_client.clone())
         .run()
         .await;
@@ -116,14 +70,19 @@ pub async fn route_create_database(context: &State<crate::context::Context>) -> 
         return Status::InternalServerError;
     }
 
-    let rendered_template = create_database(
+    let database_creation_result = create_database(
         &context.database_template_yaml_raw,
+        &request.0,
         &context.kubernetes_client,
         &discovery.unwrap(),
     )
     .await;
 
-    if rendered_template.is_err() {
+    if database_creation_result.is_err() {
+        error!(
+            "Failed to create database: {:?}",
+            database_creation_result.err()
+        );
         return Status::InternalServerError;
     }
     Status::Ok

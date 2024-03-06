@@ -1,20 +1,12 @@
-use crate::routes::create_database::*;
-use anyhow::Context;
-use anyhow::{bail, Result};
-use k8s_openapi::api::core::v1::Pod;
-use k8s_openapi::serde_json;
-use kube::api::{DynamicObject, GroupVersionKind, ListParams};
-use kube::ResourceExt;
+use crate::routes::{create_database::*, list_database::*};
+use anyhow::Result;
 use log::error;
-use models::database;
-use rocket::data;
-use rocket::form::FromForm;
+use rocket::get;
 use rocket::http::Status;
-use rocket::{get, post, serde::json::Json};
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
-use serde::Deserialize;
 
 mod context;
+mod kubernetes;
 mod models;
 mod routes;
 
@@ -59,7 +51,10 @@ async fn main() -> Result<(), ()> {
     };
 
     let launch_result = rocket::build()
-        .mount("/api", openapi_get_routes![route_create_database])
+        .mount(
+            "/api",
+            openapi_get_routes![route_create_database, route_list_database],
+        )
         .mount(
             "/",
             make_swagger_ui(&SwaggerUIConfig {
