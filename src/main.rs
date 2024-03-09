@@ -34,7 +34,11 @@ fn setup_logger() -> Result<(), log::SetLoggerError> {
                 message
             ))
         })
-        .level(log::LevelFilter::Info)
+        .level(if cfg!(debug_assertions) {
+            log::LevelFilter::Debug
+        } else {
+            log::LevelFilter::Info
+        })
         .chain(std::io::stdout())
         .apply()
 }
