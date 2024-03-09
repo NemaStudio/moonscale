@@ -9,6 +9,7 @@ use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 
 mod context;
 mod kubernetes;
+mod middlewares;
 mod models;
 mod routes;
 

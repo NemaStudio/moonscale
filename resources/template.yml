@@ -4,6 +4,7 @@ metadata:
   name: my-mysql
   labels:
     app.kubernetes.io/managed-by: Moonscale
+    app.kubernetes.io/instance: moonscale-instance-{{ name }}
 automountServiceAccountToken: false
 secrets:
   - name: my-mysql
@@ -31,6 +32,7 @@ metadata:
     janitor/ttl: 2m
   labels:
     app.kubernetes.io/managed-by: Moonscale
+    app.kubernetes.io/instance: moonscale-instance-{{ name }}
 data:
   my.cnf: |-
     [mysqld]
@@ -71,6 +73,7 @@ metadata:
   name: moonscale-instance-{{ name }}-headless
   labels:
     app.kubernetes.io/managed-by: Moonscale
+    app.kubernetes.io/instance: moonscale-instance-{{ name }}
   annotations:
     janitor/ttl: 2m
 spec:
@@ -93,6 +96,7 @@ metadata:
   name: moonscale-instance-{{ name }}
   labels:
     app.kubernetes.io/managed-by: Moonscale
+    app.kubernetes.io/instance: moonscale-instance-{{ name }}
 spec:
   type: ClusterIP
   sessionAffinity: None
@@ -114,6 +118,7 @@ metadata:
   name: moonscale-instance-{{ name }}-ps
   labels:
     app.kubernetes.io/managed-by: Moonscale
+    app.kubernetes.io/instance: moonscale-instance-{{ name }}
 spec:
   type: ClusterIP
   sessionAffinity: None
@@ -132,6 +137,9 @@ kind: Ingress
 metadata:
   annotations:
     janitor/ttl: 2m
+  labels:
+    app.kubernetes.io/managed-by: Moonscale
+    app.kubernetes.io/instance: moonscale-instance-{{ name }}
   name: moonscale-instance-{{ name }}
 spec:
   rules:
@@ -154,6 +162,7 @@ metadata:
   name: moonscale-instance-{{ name }}
   labels:
     app.kubernetes.io/managed-by: Moonscale
+    app.kubernetes.io/instance: moonscale-instance-{{ name }}
 spec:
   replicas: 1
   podManagementPolicy: ""

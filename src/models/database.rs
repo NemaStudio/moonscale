@@ -17,7 +17,7 @@ pub struct CreateDatabaseRequestModel {
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct CreateDatabaseResponseModel {
+pub struct DatabaseInstanceModel {
     /// The URL to the PlanetScale API pointing to the new underlying database.
     pub planetscale_api_url: String,
 
@@ -32,3 +32,7 @@ pub struct CreateDatabaseResponseModel {
     // A timestamp corresponding to the approximate time where the database will be deleted.
     //pub deletion_timestamp: OffsetDateTime,
 }
+
+pub type CreateDatabaseResponseModel = DatabaseInstanceModel;
+
+pub type ListDatabaseResponseModel = Vec<DatabaseInstanceModel>;

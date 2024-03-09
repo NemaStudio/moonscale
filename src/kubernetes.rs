@@ -1,5 +1,7 @@
 use anyhow::Context;
-use k8s_openapi::serde_json;
+use base64::prelude::BASE64_STANDARD;
+use base64::Engine;
+use k8s_openapi::{api::core::v1::Secret, serde_json};
 use kube::{
     api::{ApiResource, DynamicObject, GroupVersionKind, Patch},
     discovery::{ApiCapabilities, Scope},
@@ -23,6 +25,25 @@ fn dynamic_api(
     } else {
         Api::default_namespaced_with(client, &ar)
     }
+}
+
+pub async fn get_database_password(kubeclient: &Client, instance_name: &str) -> Result<String, ()> {
+    let sec_api: Api<Secret> = kube::Api::namespaced(kubeclient.clone(), "moonscale");
+    let database_sec = sec_api.get(instance_name).await;
+
+    if database_sec.is_err() {
+        error!("Failed to get secret for database {}", instance_name);
+    }
+
+    let database_secret_kv = database_sec.unwrap().data.unwrap();
+    let root_password_kv = database_secret_kv.get("mysql-root-password");
+
+    if root_password_kv.is_none() {
+        error!("Failed to get root password for database {}", instance_name);
+        return Err(());
+    }
+
+    Ok(String::from_utf8(root_password_kv.unwrap().0.clone()).unwrap())
 }
 
 pub async fn kubernetes_apply_document(
