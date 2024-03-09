@@ -14,7 +14,9 @@ use rocket_okapi::openapi;
 /// This route is used to list deployed moonscale databases.
 #[openapi(tag = "Database")]
 #[get("/database")]
-pub async fn route_list_database(context: &State<crate::context::Context>) -> Status {
+pub async fn route_list_database(
+    context: &State<crate::context::Context>,
+    _key: ApiKey,
 ) -> Result<status::Custom<Json<ListDatabaseResponseModel>>, Status> {
     // TODO: Refactor, ideally we should create a custom CRD to track the resources we created
     // this would also simplify the "expiration" logic as the controller would just need to delete the CRD

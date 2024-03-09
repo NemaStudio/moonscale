@@ -63,6 +63,7 @@ async fn main() -> Result<(), ()> {
                 error!("Failed to parse MOONSCALE_RESOURCE_TTL: {}", err);
                 std::process::exit(1);
             }),
+        api_key: env::var("MOONSCALE_API_KEY").unwrap_or("".to_owned()),
     };
 
     info!("Starting moonscale server with context:");

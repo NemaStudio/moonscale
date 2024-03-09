@@ -1,3 +1,4 @@
+use crate::middlewares::authentication::ApiKey;
 use crate::models::database::CreateDatabaseResponseModel;
 use crate::{kubernetes::kubernetes_apply_document, models::database::CreateDatabaseRequestModel};
 use anyhow::{Context, Result};
@@ -82,6 +83,7 @@ async fn create_database(
 pub async fn route_create_database(
     context: &State<crate::context::Context>,
     request: Json<CreateDatabaseRequestModel>,
+    _key: ApiKey,
 ) -> Result<status::Custom<Json<CreateDatabaseResponseModel>>, Status> {
     let discovery = Discovery::new(context.kubernetes_client.clone())
         .run()
