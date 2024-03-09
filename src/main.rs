@@ -51,7 +51,14 @@ async fn main() -> Result<(), ()> {
             error!("Failed to create kubernetes client: {}", err);
             std::process::exit(1);
         }),
-        ingress_domain: env::var("INGRESS_DOMAIN").unwrap_or("example.com".to_owned()),
+        ingress_domain: env::var("MOONSCALE_INGRESS_DOMAIN").unwrap_or("example.com".to_owned()),
+        resource_ttl: env::var("MOONSCALE_RESOURCE_TTL")
+            .unwrap_or("3600".to_owned())
+            .parse()
+            .unwrap_or_else(|err| {
+                error!("Failed to parse MOONSCALE_RESOURCE_TTL: {}", err);
+                std::process::exit(1);
+            }),
     };
 
     info!("Starting moonscale server with context:");

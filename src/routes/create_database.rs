@@ -46,6 +46,7 @@ async fn create_database(
 
     template_context.insert("name", variable_data.name.as_str());
     template_context.insert("domain", context.ingress_domain.as_str());
+    template_context.insert("resource_ttl", &context.resource_ttl);
     // TODO: This will be a problem if you create a database that already exists, as
     // the password will be different from what mysql expects
     // and also because the pod isn't restarted when the secret is updated
