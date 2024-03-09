@@ -18,8 +18,8 @@ metadata:
     app.kubernetes.io/name: moonscale-instance-{{ name }}
 type: Opaque
 data:
-  mysql-root-password: "eW1QcFlSRnM5Tg=="
-  mysql-password: "elhNcTJYM2daUA=="
+  mysql-root-password: "{{ root_password }}"
+  mysql-password: "{{ root_password }}"
 ---
 apiVersion: v1
 kind: ConfigMap

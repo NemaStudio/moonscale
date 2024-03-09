@@ -19,3 +19,5 @@ humantime = "2.1.0"
 log = "0.4"
 tera = "1"
 time = { version = "0.3.34", features = ["serde", "macros"] }
+rand = "0.8.5"
+base64 = "0.22.0"

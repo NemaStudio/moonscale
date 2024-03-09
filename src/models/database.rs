@@ -1,8 +1,3 @@
-use std::time;
-
-use k8s_openapi::chrono::DateTime;
-use rocket::time::serde::rfc3339;
-use rocket::time::{OffsetDateTime, Time};
 use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -25,8 +20,15 @@ pub struct CreateDatabaseRequestModel {
 pub struct CreateDatabaseResponseModel {
     /// The URL to the PlanetScale API pointing to the new underlying database.
     pub planetscale_api_url: String,
+
+    /// The username to access the database.
+    pub database_username: String,
+
+    /// The password to access the database.
+    pub database_password: String,
+
+    /// The database name
+    pub database_name: String,
     // A timestamp corresponding to the approximate time where the database will be deleted.
     //pub deletion_timestamp: OffsetDateTime,
 }
-
-pub struct Database {}

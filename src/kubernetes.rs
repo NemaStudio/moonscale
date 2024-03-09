@@ -46,12 +46,15 @@ pub async fn kubernetes_apply_document(
         let api = dynamic_api(ar, caps, kubeclient.clone(), namespace, false);
         let data: serde_json::Value =
             serde_json::to_value(&obj).context("Failed to serialize object to JSON")?;
-        let _r = api.patch(&name, patch_params, &Patch::Apply(data)).await;
+        let api_patch_result = api.patch(&name, patch_params, &Patch::Apply(data)).await;
 
         // TODO: Add system labels injection (managed-by...)
-        if _r.is_err() {
-            error!("Failed to apply document for {:?}: {:?}", name, _r);
-            return Err(_r.err().unwrap().into());
+        if api_patch_result.is_err() {
+            error!(
+                "Failed to apply document for {:?}: {:?}",
+                name, api_patch_result
+            );
+            return Err(api_patch_result.err().unwrap().into());
         }
         info!("Applied {:?}", &obj.types.unwrap());
     } else {

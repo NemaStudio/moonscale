@@ -23,7 +23,8 @@ pub async fn route_list_database(context: &State<crate::context::Context>) -> St
         return Status::InternalServerError;
     }
     for sts in managed_sts.unwrap().items {
-        debug!("{:?}", sts.metadata.name.unwrap());
+        debug!("Found managed database: {:?}", sts.metadata.name.unwrap());
     }
+
     Status::Ok
 }

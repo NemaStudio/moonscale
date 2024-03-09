@@ -1,12 +1,16 @@
+use crate::models::database::CreateDatabaseResponseModel;
+use crate::{kubernetes::kubernetes_apply_document, models::database::CreateDatabaseRequestModel};
 use anyhow::{Context, Result};
+use base64::prelude::*;
 use kube::{api::PatchParams, Discovery};
 use log::error;
+use rand::distributions::Alphanumeric;
+use rand::distributions::DistString;
+use rocket::response::status::{self};
 use rocket::{http::Status, post, serde::json::Json, State};
 use rocket_okapi::openapi;
 use serde::Deserialize;
 use tera::Tera;
-
-use crate::{kubernetes::kubernetes_apply_document, models::database::CreateDatabaseRequestModel};
 
 fn multidoc_deserialize(
     data: &str,
@@ -35,12 +39,17 @@ async fn create_database(
     variable_data: &CreateDatabaseRequestModel,
     context: &crate::context::Context,
     discovery: &Discovery,
-) -> Result<(), anyhow::Error> {
+) -> Result<CreateDatabaseResponseModel, anyhow::Error> {
     let ssapply = PatchParams::apply("kubectl-light").force();
     let mut template_context: tera::Context = tera::Context::new();
+    let random_password = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
 
     template_context.insert("name", variable_data.name.as_str());
     template_context.insert("domain", context.ingress_domain.as_str());
+    template_context.insert(
+        "root_password",
+        &BASE64_STANDARD.encode(random_password.as_str()),
+    );
     // TODO: Check size formatting
     template_context.insert("pvc_size", format!("{}Gi", variable_data.size).as_str());
     for doc in multidoc_deserialize(&template_data, &mut template_context)? {
@@ -48,7 +57,13 @@ async fn create_database(
             kubernetes_apply_document(&context.kubernetes_client, discovery, &ssapply, doc).await;
         // let obj: DynamicObject = serde_yaml::from_value(doc)?;
     }
-    Ok(())
+
+    Ok(CreateDatabaseResponseModel {
+        database_name: "planetscale".to_owned(),
+        database_password: random_password,
+        database_username: "root".to_owned(),
+        planetscale_api_url: "https://planetscale.com".to_string(),
+    })
 }
 
 /// # Create a PlanetScale's compatible database
@@ -59,14 +74,14 @@ async fn create_database(
 pub async fn route_create_database(
     context: &State<crate::context::Context>,
     request: Json<CreateDatabaseRequestModel>,
-) -> Status {
+) -> Result<status::Custom<Json<CreateDatabaseResponseModel>>, Status> {
     let discovery = Discovery::new(context.kubernetes_client.clone())
         .run()
         .await;
 
     if discovery.is_err() {
         error!("Failed to discover Kubernetes API");
-        return Status::InternalServerError;
+        return Err(Status::InternalServerError);
     }
 
     let database_creation_result = create_database(
@@ -82,7 +97,11 @@ pub async fn route_create_database(
             "Failed to create database: {:?}",
             database_creation_result.err()
         );
-        return Status::InternalServerError;
+        return Err(Status::InternalServerError);
     }
-    Status::Ok
+
+    Ok(status::Custom(
+        Status::Created,
+        Json(database_creation_result.unwrap()),
+    ))
 }
