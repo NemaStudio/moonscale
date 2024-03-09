@@ -46,6 +46,9 @@ async fn create_database(
 
     template_context.insert("name", variable_data.name.as_str());
     template_context.insert("domain", context.ingress_domain.as_str());
+    // TODO: This will be a problem if you create a database that already exists, as
+    // the password will be different from what mysql expects
+    // and also because the pod isn't restarted when the secret is updated
     template_context.insert(
         "root_password",
         &BASE64_STANDARD.encode(random_password.as_str()),
@@ -62,7 +65,11 @@ async fn create_database(
         database_name: "planetscale".to_owned(),
         database_password: random_password,
         database_username: "root".to_owned(),
-        planetscale_api_url: "https://planetscale.com".to_string(),
+        planetscale_api_url: format!(
+            "https://moonscale-instance-{}.{}",
+            variable_data.name, context.ingress_domain
+        )
+        .to_string(),
     })
 }
 
