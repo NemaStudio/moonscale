@@ -64,7 +64,7 @@ pub async fn route_list_database(
         }
         managed_dbs.push(DatabaseInstanceModel {
             planetscale_api_url: format!(
-                "https://moonscale-instance-{}.{}",
+                "https://{}.{}",
                 db_instance_name.unwrap(),
                 context.ingress_domain
             ),

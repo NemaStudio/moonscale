@@ -1,6 +1,4 @@
 use anyhow::Context;
-use base64::prelude::BASE64_STANDARD;
-use base64::Engine;
 use k8s_openapi::{api::core::v1::Secret, serde_json};
 use kube::{
     api::{ApiResource, DynamicObject, GroupVersionKind, Patch},

@@ -1,6 +1,6 @@
 use std::env;
 
-use crate::routes::{create_database::*, list_database::*};
+use crate::routes::{create_database::*, delete_database::*, list_database::*};
 use anyhow::Result;
 use log::{error, info};
 use rocket::get;
@@ -35,9 +35,10 @@ fn setup_logger() -> Result<(), log::SetLoggerError> {
             ))
         })
         .level(if cfg!(debug_assertions) {
+            // TODO: Add a flag to enable debug logging
             log::LevelFilter::Debug
         } else {
-            log::LevelFilter::Info
+            log::LevelFilter::Debug
         })
         .chain(std::io::stdout())
         .apply()
@@ -63,7 +64,7 @@ async fn main() -> Result<(), ()> {
                 error!("Failed to parse MOONSCALE_RESOURCE_TTL: {}", err);
                 std::process::exit(1);
             }),
-        api_key: env::var("MOONSCALE_API_KEY").unwrap_or("".to_owned()),
+        api_key: env::var("MOONSCALE_API_KEY").unwrap_or("".to_owned()), // TODO: Add warning if not set, or make it required
     };
 
     info!("Starting moonscale server with context:");
@@ -72,7 +73,11 @@ async fn main() -> Result<(), ()> {
     let launch_result = rocket::build()
         .mount(
             "/api",
-            openapi_get_routes![route_create_database, route_list_database],
+            openapi_get_routes![
+                route_create_database,
+                route_list_database,
+                route_delete_database
+            ],
         )
         .mount(
             "/",

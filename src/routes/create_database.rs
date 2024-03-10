@@ -56,7 +56,10 @@ async fn create_database(
         &BASE64_STANDARD.encode(random_password.as_str()),
     );
     // TODO: Check size formatting
-    template_context.insert("pvc_size", format!("{}Gi", variable_data.size).as_str());
+    template_context.insert(
+        "pvc_size",
+        format!("{}Gi", num::clamp(variable_data.size, 1, 5)).as_str(),
+    );
     for doc in multidoc_deserialize(&template_data, &mut template_context)? {
         let _ =
             kubernetes_apply_document(&context.kubernetes_client, discovery, &ssapply, doc).await;
@@ -64,7 +67,7 @@ async fn create_database(
     }
 
     Ok(CreateDatabaseResponseModel {
-        database_name: "planetscale".to_owned(),
+        database_name: variable_data.name.clone(),
         database_password: random_password,
         database_username: "root".to_owned(),
         planetscale_api_url: format!(

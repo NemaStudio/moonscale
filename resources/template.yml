@@ -4,7 +4,7 @@ metadata:
   name: my-mysql
   labels:
     app.kubernetes.io/managed-by: Moonscale
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
 automountServiceAccountToken: false
 secrets:
   - name: my-mysql
@@ -16,7 +16,7 @@ metadata:
     janitor/ttl: {{ resource_ttl }}m
   name: moonscale-instance-{{ name }}
   labels:
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
     app.kubernetes.io/managed-by: Moonscale
     app.kubernetes.io/name: moonscale-instance-{{ name }}
 type: Opaque
@@ -32,7 +32,7 @@ metadata:
     janitor/ttl: {{ resource_ttl }}m
   labels:
     app.kubernetes.io/managed-by: Moonscale
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
 data:
   my.cnf: |-
     [mysqld]
@@ -53,7 +53,6 @@ data:
     slow_query_log=0
     long_query_time=10.0
     auto_generate_certs=ON
-    require_secure_transport=ON
 
 
     [client]
@@ -73,7 +72,7 @@ metadata:
   name: moonscale-instance-{{ name }}-headless
   labels:
     app.kubernetes.io/managed-by: Moonscale
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
   annotations:
     janitor/ttl: {{ resource_ttl }}m
 spec:
@@ -85,7 +84,7 @@ spec:
       port: 3306
       targetPort: mysql
   selector:
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
     app.kubernetes.io/name: moonscale-instance-{{ name }}
 ---
 apiVersion: v1
@@ -96,7 +95,7 @@ metadata:
   name: moonscale-instance-{{ name }}
   labels:
     app.kubernetes.io/managed-by: Moonscale
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
 spec:
   type: ClusterIP
   sessionAffinity: None
@@ -107,7 +106,7 @@ spec:
       targetPort: mysql
       nodePort: null
   selector:
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
     app.kubernetes.io/name: moonscale-instance-{{ name }}
 ---
 apiVersion: v1
@@ -118,7 +117,7 @@ metadata:
   name: moonscale-instance-{{ name }}-ps
   labels:
     app.kubernetes.io/managed-by: Moonscale
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
 spec:
   type: ClusterIP
   sessionAffinity: None
@@ -139,7 +138,7 @@ metadata:
     janitor/ttl: {{ resource_ttl }}m
   labels:
     app.kubernetes.io/managed-by: Moonscale
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
   name: moonscale-instance-{{ name }}
 spec:
   rules:
@@ -162,13 +161,13 @@ metadata:
   name: moonscale-instance-{{ name }}
   labels:
     app.kubernetes.io/managed-by: Moonscale
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
 spec:
   replicas: 1
   podManagementPolicy: ""
   selector:
     matchLabels:
-      app.kubernetes.io/instance: moonscale-instance-{{ name }}
+      app.kubernetes.io/instance: {{ name }}
       app.kubernetes.io/name: moonscale-instance-{{ name }}
   serviceName: my-mysql
   updateStrategy:
@@ -176,7 +175,7 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/instance: moonscale-instance-{{ name }}
+        app.kubernetes.io/instance: {{ name }}
         app.kubernetes.io/managed-by: Moonscale
         app.kubernetes.io/name: moonscale-instance-{{ name }}
     spec:
@@ -191,7 +190,7 @@ spec:
             - podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+                    app.kubernetes.io/instance: {{ name }}
                     app.kubernetes.io/name: moonscale-instance-{{ name }}
                 topologyKey: kubernetes.io/hostname
               weight: 1
@@ -331,7 +330,7 @@ spec:
           janitor/ttl: {{ resource_ttl }}m
         name: data
         labels:
-          app.kubernetes.io/instance: moonscale-instance-{{ name }}
+          app.kubernetes.io/instance: {{ name }}
           app.kubernetes.io/name: moonscale-instance-{{ name }}
       spec:
         accessModes:
