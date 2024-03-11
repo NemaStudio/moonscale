@@ -66,7 +66,7 @@ pub async fn route_list_database(
             planetscale_api_url: format!(
                 "https://{}.{}",
                 db_instance_name.unwrap(),
-                context.ingress_domain
+                context.config.ingress_domain
             ),
             database_username: "root".to_owned(),
             database_password: db_root_password.unwrap(),

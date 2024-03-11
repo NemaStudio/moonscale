@@ -2,6 +2,8 @@ use std::env;
 
 use crate::routes::{create_database::*, delete_database::*, list_database::*};
 use anyhow::Result;
+use context::Config;
+use kube::error;
 use log::{error, info};
 use rocket::get;
 use rocket::http::Status;
@@ -44,18 +46,16 @@ fn setup_logger() -> Result<(), log::SetLoggerError> {
         .apply()
 }
 
-#[rocket::main]
-async fn main() -> Result<(), ()> {
-    if setup_logger().is_err() {
-        eprintln!("Failed to setup logger, exiting.");
+fn build_config() -> Result<Config, ()> {
+    let env_api_key = env::var("MOONSCALE_API_KEY");
+
+    if env_api_key.is_err() || env_api_key.clone().unwrap() == "" {
+        error!("Invalid API key, did you set the MOONSCALE_API_KEY environment variable to a non-empty string ?");
+        return Err(());
     }
 
-    let context = context::Context {
-        database_template_yaml_raw: include_str!("../resources/template.yml").to_owned(),
-        kubernetes_client: kube::Client::try_default().await.unwrap_or_else(|err| {
-            error!("Failed to create kubernetes client: {}", err);
-            std::process::exit(1);
-        }),
+    Ok(Config {
+        api_key: env_api_key.unwrap(),
         ingress_domain: env::var("MOONSCALE_INGRESS_DOMAIN").unwrap_or("example.com".to_owned()),
         resource_ttl: env::var("MOONSCALE_RESOURCE_TTL")
             .unwrap_or("3600".to_owned())
@@ -64,11 +64,31 @@ async fn main() -> Result<(), ()> {
                 error!("Failed to parse MOONSCALE_RESOURCE_TTL: {}", err);
                 std::process::exit(1);
             }),
-        api_key: env::var("MOONSCALE_API_KEY").unwrap_or("".to_owned()), // TODO: Add warning if not set, or make it required
+    })
+}
+
+#[rocket::main]
+async fn main() -> Result<(), ()> {
+    if setup_logger().is_err() {
+        eprintln!("Failed to setup logger, exiting.");
+    }
+    let config = build_config();
+
+    if config.is_err() {
+        error!("Couldn't build configuration, check logs for error.");
+        return Err(());
+    }
+    let context = context::Context {
+        database_template_yaml_raw: include_str!("../resources/template.yml").to_owned(),
+        kubernetes_client: kube::Client::try_default().await.unwrap_or_else(|err| {
+            error!("Failed to create kubernetes client: {}", err);
+            std::process::exit(1);
+        }),
+        config: config.unwrap(),
     };
 
     info!("Starting moonscale server with context:");
-    info!("\tIngress domain: {}", context.ingress_domain);
+    info!("\tIngress domain: {}", context.config.ingress_domain);
 
     let launch_result = rocket::build()
         .mount(

@@ -22,7 +22,7 @@ impl<'r> FromRequest<'r> for ApiKey {
 
         match request.headers().get_one("Authorization") {
             None => Outcome::Error((Status::BadRequest, ())),
-            Some(key) if key == format!("Bearer {}", context.api_key) => {
+            Some(key) if key == format!("Bearer {}", context.config.api_key) => {
                 Outcome::Success(ApiKey(key.to_owned()))
             }
             Some(_) => Outcome::Error((Status::Unauthorized, ())),
