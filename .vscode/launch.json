@@ -19,6 +19,9 @@
                     "kind": "bin"
                 }
             },
+            "env": {
+                "MOONSCALE_API_KEY": "sinj"
+            },
             "args": [],
             "cwd": "${workspaceFolder}"
         },
