@@ -1,11 +1,65 @@
 use crate::middlewares::authentication::ApiKey;
 use kube::{
-    api::{DynamicObject, ListParams},
-    discovery, Api,
+    api::{DeleteParams, DynamicObject, ListParams},
+    discovery::{verbs, Scope},
+    Api, Discovery, ResourceExt,
 };
-use log::debug;
+use log::{info, warn};
 use rocket::{delete, http::Status, State};
 use rocket_okapi::openapi;
+
+async fn delete_database(
+    instance: &str,
+    context: &crate::context::Context,
+) -> Result<(), anyhow::Error> {
+    let discovery = Discovery::new(context.kubernetes_client.clone())
+        .run()
+        .await?;
+
+    for group in discovery.groups() {
+        for (ar, caps) in group.recommended_resources() {
+            if !caps.supports_operation(verbs::DELETE) || !caps.supports_operation(verbs::LIST) {
+                continue;
+            }
+            let api: Api<DynamicObject> = if caps.scope == Scope::Cluster {
+                Api::all_with(context.kubernetes_client.clone(), &ar)
+            } else {
+                Api::namespaced_with(context.kubernetes_client.clone(), "moonscale", &ar)
+            };
+
+            let list = api
+                .list(
+                    &ListParams::default().labels(
+                        format!(
+                            "app.kubernetes.io/managed-by=Moonscale,app.kubernetes.io/instance={}",
+                            instance
+                        )
+                        .as_str(),
+                    ), //.labels(format!("app.kubernetes.io/managed-by=Moonscale").as_str()
+                )
+                .await?;
+            for item in list.items {
+                let name = item.name_any();
+                let ns = item.metadata.namespace.map(|s| s + "/").unwrap_or_default();
+
+                info!(
+                    "Deleting resource: namespace: {}, resource: {}, name: {}",
+                    ns, ar.kind, name
+                );
+                let delete_result = api.delete(name.as_str(), &DeleteParams::foreground()).await;
+
+                if delete_result.is_err() {
+                    warn!(
+                        "Failed to cleanup resource while deleting instance {} ({}/{})",
+                        instance, ar.kind, name
+                    );
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
 
 /// # Delete a managed database
 ///
@@ -13,36 +67,16 @@ use rocket_okapi::openapi;
 #[openapi(tag = "Database")]
 #[delete("/database/<instance>")]
 pub async fn route_delete_database(
-    instance: String,
+    instance: &str,
     context: &State<crate::context::Context>,
     _key: ApiKey,
 ) -> Status {
-    let apigroup = discovery::group(&context.kubernetes_client, "kube.rs")
-        .await
-        .unwrap();
-    let (ar, _) = apigroup.recommended_kind("Document").unwrap();
-    let resources_gen_api: Api<DynamicObject> =
-        Api::namespaced_with(context.kubernetes_client.clone(), "moonscale", &ar);
-    let resources = resources_gen_api
-        .list(
-            &ListParams::default().labels(
-                format!(
-                    "app.kubernetes.io/managed-by=Moonscale,app.kubernetes.io/instance={}",
-                    instance
-                )
-                .as_str(),
-            ),
-        )
-        .await;
+    info!("Deleting moonscale instance {}", instance);
+    let delete_result = delete_database(instance, context).await;
 
-    for resource in resources.unwrap() {
-        // let resource = resource.unwrap();
-        // let resource_name = resource.metadata.name.as_ref().unwrap();
-        // let _ = resources_gen_api.delete(resource_name, &Default::default()).await;
-        debug!(
-            "Deleted resource: {}",
-            resource.metadata.name.unwrap().as_str()
-        );
+    if delete_result.is_err() {
+        return Status::InternalServerError;
     }
+
     Status::Ok
 }
