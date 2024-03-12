@@ -15,6 +15,7 @@ async fn delete_database(
     let discovery = Discovery::new(context.kubernetes_client.clone())
         .run()
         .await?;
+    let mut deleted: bool = false;
 
     for group in discovery.groups() {
         for (ar, caps) in group.recommended_resources() {
@@ -38,6 +39,7 @@ async fn delete_database(
                     ), //.labels(format!("app.kubernetes.io/managed-by=Moonscale").as_str()
                 )
                 .await?;
+
             for item in list.items {
                 let name = item.name_any();
                 let ns = item.metadata.namespace.map(|s| s + "/").unwrap_or_default();
@@ -53,12 +55,26 @@ async fn delete_database(
                         "Failed to cleanup resource while deleting instance {} ({}/{})",
                         instance, ar.kind, name
                     );
+                } else {
+                    deleted = true;
                 }
             }
         }
     }
 
-    Ok(())
+    match deleted {
+        true => Ok(()),
+        false => {
+            warn!(
+                "No resources found for instance {}, or couldn't delete them skipping delete order.",
+                instance
+            );
+            Err(anyhow::anyhow!(
+                "No resources found for instance {}",
+                instance
+            ))
+        }
+    }
 }
 
 /// # Delete a managed database
@@ -75,6 +91,15 @@ pub async fn route_delete_database(
     let delete_result = delete_database(instance, context).await;
 
     if delete_result.is_err() {
+        // TODO: Refactor
+        if delete_result
+            .err()
+            .unwrap()
+            .to_string()
+            .contains("No resources found")
+        {
+            return Status::NotFound;
+        }
         return Status::InternalServerError;
     }
 
