@@ -332,10 +332,11 @@ spec:
         labels:
           app.kubernetes.io/instance: {{ name }}
           app.kubernetes.io/name: moonscale-instance-{{ name }}
+          app.kubernetes.io/managed-by: Moonscale
       spec:
         accessModes:
           - "ReadWriteOnce"
-        storageClassName: "cinder-generic-hdd"
+        storageClassName: "cinder-generic-nvme"
         resources:
           requests:
             storage: "{{ pvc_size }}"

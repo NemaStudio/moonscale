@@ -1,15 +1,10 @@
-use crate::{
-    kubernetes::get_database_password,
-    middlewares::authentication::ApiKey,
-    models::database::{DatabaseInstanceModel, ListDatabaseResponseModel},
-};
-use k8s_openapi::api::apps::v1::StatefulSet;
+use crate::middlewares::authentication::ApiKey;
 use kube::{
     api::{DynamicObject, ListParams},
     discovery, Api,
 };
-use log::{debug, info};
-use rocket::{delete, get, http::Status, response::status, serde::json::Json, State};
+use log::debug;
+use rocket::{delete, http::Status, State};
 use rocket_okapi::openapi;
 
 /// # Delete a managed database
@@ -25,7 +20,7 @@ pub async fn route_delete_database(
     let apigroup = discovery::group(&context.kubernetes_client, "kube.rs")
         .await
         .unwrap();
-    let (ar, caps) = apigroup.recommended_kind("Document").unwrap();
+    let (ar, _) = apigroup.recommended_kind("Document").unwrap();
     let resources_gen_api: Api<DynamicObject> =
         Api::namespaced_with(context.kubernetes_client.clone(), "moonscale", &ar);
     let resources = resources_gen_api

@@ -3,7 +3,6 @@ use std::env;
 use crate::routes::{create_database::*, delete_database::*, list_database::*};
 use anyhow::Result;
 use context::Config;
-use kube::error;
 use log::{error, info};
 use rocket::get;
 use rocket::http::Status;
@@ -14,6 +13,7 @@ mod kubernetes;
 mod middlewares;
 mod models;
 mod routes;
+mod service;
 
 /// # Get if service is ready
 ///
