@@ -13,7 +13,6 @@ mod kubernetes;
 mod middlewares;
 mod models;
 mod routes;
-mod service;
 
 /// # Get if service is ready
 ///
@@ -38,7 +37,7 @@ fn setup_logger() -> Result<(), log::SetLoggerError> {
         })
         .level(if cfg!(debug_assertions) {
             // TODO: Add a flag to enable debug logging
-            log::LevelFilter::Debug
+            log::LevelFilter::Info
         } else {
             log::LevelFilter::Debug
         })
