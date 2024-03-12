@@ -27,10 +27,13 @@ fn dynamic_api(
 
 pub async fn get_database_password(kubeclient: &Client, instance_name: &str) -> Result<String, ()> {
     let sec_api: Api<Secret> = kube::Api::namespaced(kubeclient.clone(), "moonscale");
-    let database_sec = sec_api.get(instance_name).await;
+    let database_sec = sec_api
+        .get(format!("moonscale-instance-{}", instance_name).as_str())
+        .await;
 
     if database_sec.is_err() {
         error!("Failed to get secret for database {}", instance_name);
+        return Err(());
     }
 
     let database_secret_kv = database_sec.unwrap().data.unwrap();
