@@ -31,7 +31,6 @@ pub async fn route_list_database(
     if managed_sts.is_err() {
         return Err(Status::InternalServerError);
     }
-
     for sts in managed_sts.unwrap().items {
         let database_name = sts.metadata.name.clone();
 
@@ -64,7 +63,7 @@ pub async fn route_list_database(
         }
         managed_dbs.push(DatabaseInstanceModel {
             planetscale_api_url: format!(
-                "https://{}.{}",
+                "https://moonscale-instance-{}.{}",
                 db_instance_name.unwrap(),
                 context.config.ingress_domain
             ),
