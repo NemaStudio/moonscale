@@ -128,7 +128,7 @@ spec:
       targetPort: planetscale-api
       nodePort: null
   selector:
-    app.kubernetes.io/instance: moonscale-instance-{{ name }}
+    app.kubernetes.io/instance: {{ name }}
     app.kubernetes.io/name: moonscale-instance-{{ name }}
 ---
 apiVersion: networking.k8s.io/v1
