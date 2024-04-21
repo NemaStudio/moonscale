@@ -53,6 +53,7 @@ data:
     slow_query_log=0
     long_query_time=10.0
     auto_generate_certs=ON
+    max_connections=10000
 
 
     [client]
