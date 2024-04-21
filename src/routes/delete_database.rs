@@ -38,9 +38,19 @@ async fn delete_database(
                         .as_str(),
                     ), //.labels(format!("app.kubernetes.io/managed-by=Moonscale").as_str()
                 )
-                .await?;
+                .await;
 
-            for item in list.items {
+            if list.is_err() {
+                warn!(
+                    "Failed to list resources while deleting instance {} ({}/{})",
+                    instance,
+                    ar.kind,
+                    list.err().unwrap()
+                );
+                continue;
+            }
+
+            for item in list.unwrap().items {
                 let name = item.name_any();
                 let ns = item.metadata.namespace.map(|s| s + "/").unwrap_or_default();
 

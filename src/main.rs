@@ -37,7 +37,7 @@ fn setup_logger() -> Result<(), log::SetLoggerError> {
         })
         .level(if cfg!(debug_assertions) {
             // TODO: Add a flag to enable debug logging
-            log::LevelFilter::Info
+            log::LevelFilter::Debug
         } else {
             log::LevelFilter::Debug
         })
