@@ -4,7 +4,6 @@ metadata:
   name: my-mysql
   labels:
     app.kubernetes.io/managed-by: Moonscale
-    app.kubernetes.io/instance: {{ name }}
 automountServiceAccountToken: false
 secrets:
   - name: my-mysql
