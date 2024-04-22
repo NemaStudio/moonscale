@@ -32,3 +32,7 @@ cd unsupported
   EOF > values.yaml
 helm install -n moonscale --create-namespace -f values.yaml kube-janitor ./helm 
 ```
+## Known issues
+### Database direct access
+
+If you need direct access to your MySQL database (3306), you'll have to make sure your ingress controller supports L4 routing (usually SNI routing), but especially that it supports routing the MySQL underlying protocol. If you use Traefik, this is not available right now, [we opened an issue](https://github.com/traefik/traefik/issues/10505) decribing the problem if you want to learn more about it / contribute.
